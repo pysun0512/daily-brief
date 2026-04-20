@@ -1,5 +1,6 @@
 """
 아침 브리핑 전체 파이프라인 실행
+- 데이터 수집 → 메일 + 슬랙 전송
 """
 import sys
 import os
@@ -7,7 +8,8 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from collectors import hackernews, naver_news
-from delivery import email_sender
+from delivery import email_sender, slack_sender
+
 
 def main():
     print("=" * 50)
@@ -26,13 +28,24 @@ def main():
     
     print()
     print("=" * 50)
-    print("📧 메일 전송")
+    print("📤 전송")
     print("=" * 50)
     
-    email_sender.send()
+    # 메일 전송
+    try:
+        email_sender.send()
+    except Exception as e:
+        print(f"❌ 메일 전송 실패: {e}")
+    
+    # 슬랙 전송
+    try:
+        slack_sender.send()
+    except Exception as e:
+        print(f"❌ 슬랙 전송 실패: {e}")
     
     print()
     print("🎉 완료")
+
 
 if __name__ == "__main__":
     main()
