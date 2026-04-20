@@ -1,0 +1,98 @@
+name: Daily Brief
+
+on:
+  schedule:
+    # 매일 KST 07:00 = UTC 22:00
+    - cron: '0 22 * * *'
+  workflow_dispatch:  # 수동 실행 가능 (테스트용)
+
+permissions:
+  contents: read
+
+jobs:
+  brief:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet requests beautifulsoup4 python-dotenv lxml
+
+      - name: Collect news data
+        run: |
+          python3 run.py
+
+      - name: Run Claude analysis & send to Slack
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: "--max-turns 20"
+          prompt: |
+            You are 강태양's morning intelligence agent.
+
+            # CRITICAL RULES (READ FIRST)
+            - DO NOT commit, push, create branches, or open PRs. None.
+            - DO NOT modify any file in the repo.
+            - You are running in GitHub Actions but you must NOT use git operations.
+            - Only allowed actions: read files, run bash commands for analysis, web_search, curl POST to Slack.
+
+            # CONTEXT
+            Read BRIEFING_CONTEXT.md to understand 강태양's profile, interests, and the desired briefing style.
+
+            # DATA
+            The data has been pre-collected. Read these files:
+            - data/hn.json (Hacker News today's top items)
+            - data/naver.json (Naver news rankings)
+
+            # ANALYZE
+            - Pick 3-5 most important items for 강태양 today
+            - Use web_search if needed for background or trends
+            - Find connections to his projects (QuitBank, indie app dev, Korean fintech, AI tooling)
+            - Note cross-news patterns
+
+            Be selective. Quality over quantity.
+
+            # COMPOSE BRIEFING IN KOREAN
+            Write a Slack message in Korean using Block Kit format.
+
+            Structure:
+            - Header: ☀️ [오늘 날짜] 종합 브리핑
+            - 🎯 오늘의 핵심 (2-3 sentences of top-line judgment)
+            - Categorized sections with relevant news only:
+              - 💻 기술 / AI
+              - 💰 핀테크 / 경제
+              - 🇰🇷 한국 시장
+              - 🚬 헬스테크 / 금연 (if relevant)
+            - 💡 오늘 한 줄: [single sharp insight]
+
+            For each news item:
+            - Bold title with link
+            - 2-3 line Korean summary
+            - "→ 태양님 관점:" line when relevant
+
+            Keep total under 3500 characters.
+
+            # SEND TO SLACK
+            Use curl to POST to the webhook URL stored in env var SLACK_WEBHOOK_URL.
+
+            Example:
+            curl -X POST -H 'Content-type: application/json' \
+              --data '{"text":"...","blocks":[...]}' \
+              "$SLACK_WEBHOOK_URL"
+
+            # REPORT
+            After sending, briefly print:
+            - Number of items analyzed
+            - Number of web_searches performed
+            - Slack response status
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
