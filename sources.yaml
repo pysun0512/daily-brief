@@ -1,0 +1,82 @@
+# === 글로벌 경제 / 시장 ===
+global_economy:
+  - name: "FT World"
+    url: "https://www.ft.com/world?format=rss"
+    category: economy
+    enabled: true
+  - name: "FT Markets"
+    url: "https://www.ft.com/markets?format=rss"
+    category: economy
+    enabled: true
+  - name: "FT Companies"
+    url: "https://www.ft.com/companies?format=rss"
+    category: economy
+    enabled: true
+  - name: "BBC Business"
+    url: "https://feeds.bbci.co.uk/news/business/rss.xml"
+    category: economy
+    enabled: true
+
+# === 한국 경제 ===
+korea_economy:
+  - name: "한국경제 전체"
+    url: "https://www.hankyung.com/feed/all-news"
+    category: korea_economy
+    enabled: true
+  - name: "매일경제 증권"
+    url: "https://www.mk.co.kr/rss/50200011/"
+    category: korea_economy
+    enabled: true
+  - name: "연합뉴스 경제"
+    url: "https://www.yna.co.kr/rss/economy.xml"
+    category: korea_economy
+    enabled: true
+
+# === 정치 ===
+politics:
+  - name: "BBC Politics"
+    url: "https://feeds.bbci.co.uk/news/politics/rss.xml"
+    category: politics
+    enabled: true
+  - name: "연합뉴스 정치"
+    url: "https://www.yna.co.kr/rss/politics.xml"
+    category: politics
+    enabled: true
+
+# === 기술 / AI 1차 소스 (별도 섹션) ===
+ai_primary:
+  - name: "Anthropic News (비공식 RSS)"
+    url: "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_news.xml"
+    category: ai
+    enabled: true
+  - name: "Anthropic Engineering"
+    url: "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_engineering.xml"
+    category: ai
+    enabled: true
+  - name: "Anthropic Research"
+    url: "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_research.xml"
+    category: ai
+    enabled: true
+  - name: "Claude Code Changelog"
+    url: "https://raw.githubusercontent.com/Olshansk/rss-feeds/main/feeds/feed_anthropic_changelog_claude_code.xml"
+    category: ai
+    enabled: true
+  - name: "OpenAI News"
+    url: "https://openai.com/news/rss.xml"
+    category: ai
+    enabled: true
+
+# === 기술 큐레이션 ===
+tech_curation:
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    category: tech
+    enabled: true
+  - name: "전자신문 IT"
+    url: "https://rss.etnews.com/Section902.xml"
+    category: tech_korea
+    enabled: true
+  - name: "디지털데일리"
+    url: "https://www.ddaily.co.kr/rss/allArticle.xml"
+    category: tech_korea
+    enabled: true

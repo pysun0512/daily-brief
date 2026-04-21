@@ -2,7 +2,7 @@ name: Daily Brief
 
 on:
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '0 22 * * *'  # KST 07:00 = UTC 22:00
   workflow_dispatch:
 
 permissions:
@@ -12,6 +12,8 @@ jobs:
   brief:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      TZ: Asia/Seoul
 
     steps:
       - name: Checkout repo
@@ -23,7 +25,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install Python dependencies
-        run: pip install --quiet requests beautifulsoup4 python-dotenv lxml
+        run: pip install --quiet requests beautifulsoup4 python-dotenv lxml feedparser pyyaml
 
       - name: Collect news data
         run: python3 run.py
@@ -41,55 +43,93 @@ jobs:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          # KST 기준 오늘 날짜 명시 (Claude가 헷갈리지 않게)
+          export TODAY_KST=$(date +"%Y년 %m월 %d일")
+          echo "오늘 날짜 (KST): $TODAY_KST"
+          
           claude -p "$(cat <<'PROMPT'
-          You are 강태양's morning intelligence agent.
-
+          You are a morning intelligence agent.
+          
           # CRITICAL RULES
           - DO NOT commit, push, create branches, or open PRs.
           - DO NOT modify any file in the repo.
           - Only allowed: read files, run bash, web_search, curl POST to Slack.
 
           # CONTEXT
-          Read BRIEFING_CONTEXT.md to understand 강태양's profile and preferred briefing style.
+          Read BRIEFING_CONTEXT.md for tone, structure, and source-tier guidance.
+          
+          # DATE
+          Today's date in KST is in environment variable TODAY_KST.
+          Use this exact value in the briefing header. Do NOT compute date yourself.
+          Verify with: bash command `echo $TODAY_KST`
 
           # DATA (PRE-COLLECTED)
-          Read these JSON files:
-          - data/hn.json (Hacker News today's top items)
-          - data/naver.json (Naver news rankings)
+          Read the following JSON files. Each contains items from authoritative sources, filtered to last 24 hours:
+          
+          - data/hn.json — Hacker News top items (tech curation)
+          - data/naver.json — Naver news rankings (Korean economy/politics/IT)
+          - data/rss_economy.json — Global economy/markets (FT, BBC)
+          - data/rss_korea_economy.json — Korean economy (한경, 매경, 연합)
+          - data/rss_politics.json — Politics (BBC, 연합)
+          - data/rss_ai.json — AI primary sources (Anthropic, OpenAI) ⭐
+          - data/rss_tech.json — Global tech (TechCrunch)
+          - data/rss_tech_korea.json — Korean tech (전자신문, 디지털데일리)
+          
+          Some files may have 0 items if no news in last 24h. That's okay — skip empty.
 
-          # ANALYZE (BE EFFICIENT)
-          - Pick 3-5 most important items for 강태양 today
-          - Use WebSearch SPARINGLY — max 3 searches total
-          - Skip items not relevant to his interests (QuitBank, indie app dev, Korean fintech, AI tooling, healthtech)
+          # ANALYZE
+          - Identify 3-5 most important items overall (across all categories)
+          - Tech/AI section deserves MORE depth than others (per BRIEFING_CONTEXT.md)
+          - Use WebSearch SPARINGLY — max 3 searches, only when you need critical context for a major story
+          - Prioritize tier-1 sources (FT, Reuters-equivalent, Anthropic/OpenAI direct, Korean tier-1 매체) over tier-3
+          - When multiple sources cover same event, pick the most authoritative as primary
+          - Look for analysis/forecast content (analyst reports, market predictions) — highlight these
 
           # COMPOSE BRIEFING IN KOREAN
-          Write a Slack Block Kit message in Korean.
+          Write a Slack Block Kit message in Korean. Compressed structure (morning, time-sensitive):
 
-          Structure:
-          - Header: ☀️ [날짜] 종합 브리핑
-          - 🎯 오늘의 핵심 (2-3 sentences)
-          - Categorized sections (only if relevant news exists):
-            * 💻 기술 / AI
-            * 💰 핀테크 / 경제
-            * 🇰🇷 한국 시장
-            * 🚬 헬스테크 / 금연
-          - 💡 오늘 한 줄: [single sharp insight]
+          ☀️ {TODAY_KST} 종합 브리핑
 
-          For each item: bold title with link, 2-3 line Korean summary, optional "→ 태양님 관점:" line.
+          🎯 오늘의 핵심
+          [1-2 sentences: most important takeaway across everything]
+
+          💰 경제 / 시장
+          [2-3 items: global + Korea blended]
+          → 변화/예측: [1 line if there's relevant analysis/forecast]
+
+          🏛️ 정치 / 정책
+          [1-2 items max]
+
+          🤖 기술 / AI ⭐
+          [3-4 items, deeper analysis]
+          [For each: title + 2-3 line summary + tech/industry implication]
+
+          💡 한 줄: [meta insight or pattern of the day]
+
+          For each news item:
+          - Bold title with link
+          - 2-3 line Korean summary
+          - For analysis/forecast items, add "→ 시사점:" line
+
           Total under 3500 characters.
 
           # SEND TO SLACK
-          Save payload to /tmp/payload.json then send:
+          Save your composed JSON payload to /tmp/payload.json first, then send:
 
           cat > /tmp/payload.json << 'EOF'
-          {"text":"...","blocks":[...]}
+          {"text":"...fallback...","blocks":[...]}
           EOF
           curl -X POST -H 'Content-type: application/json' --data @/tmp/payload.json "\$SLACK_WEBHOOK_URL"
 
-          Verify response is "ok".
+          The SLACK_WEBHOOK_URL and TODAY_KST environment variables are already set.
+          Verify the response is "ok".
 
           # REPORT
-          Briefly print: items analyzed, web searches performed, Slack response.
+          Briefly print:
+          - TODAY_KST value used
+          - Number of items analyzed per category
+          - WebSearch count
+          - Slack response status
           PROMPT
           )" \
             --allowedTools "Read,Bash,WebSearch,WebFetch" \
